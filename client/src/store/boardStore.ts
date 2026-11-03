@@ -151,6 +151,9 @@ const engine = createSyncEngine({
   send: (op) => sendOp(op, confirmedVersion),
   onSuccess: handleSuccess,
   onError: handleError,
+  // A newer move replaced this one before it was sent. Its effect is already covered
+  // by the newer op, so it just leaves pending (no request, no toast).
+  onReplaced: (replaced) => removeOp(replaced.opId),
 });
 
 function dispatch(op: Op) {

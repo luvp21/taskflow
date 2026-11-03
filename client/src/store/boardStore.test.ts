@@ -93,6 +93,28 @@ describe('boardStore', () => {
     expect(store().view.tasksById.a).toMatchObject({ title: 'Renamed', version: 4 });
   });
 
+  it('moves a card between its new neighbors right away, then sends the placement', async () => {
+    vi.mocked(api.fetchTasks).mockResolvedValue([
+      serverTask(),
+      serverTask({ _id: 'x', columnId: 'done', orderIndex: 1000 }),
+      serverTask({ _id: 'y', columnId: 'done', orderIndex: 2000 }),
+    ]);
+    await store().loadTasks();
+    const response = deferred<api.MoveResult>();
+    vi.mocked(api.moveTask).mockReturnValue(response.promise);
+    const placement = { columnId: 'done' as const, beforeId: 'x', afterId: 'y' };
+
+    const done = store().moveTask('a', placement);
+
+    expect(store().view.columns).toMatchObject({ todo: [], done: ['x', 'a', 'y'] });
+    expect(store().view.tasksById.a.orderIndex).toBe(1500);
+    expect(api.moveTask).toHaveBeenCalledWith('a', placement, 3);
+
+    response.reject(new Error('500'));
+    await expect(done).rejects.toThrow('500');
+    expect(store().view.columns.todo).toEqual(['a']);
+  });
+
   it('reports a load failure without throwing', async () => {
     vi.mocked(api.fetchTasks).mockRejectedValue(new Error('Network error'));
 

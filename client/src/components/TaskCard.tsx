@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import clsx from 'clsx';
 import { memo, type CSSProperties } from 'react';
 import { useBoardStore } from '../store/boardStore.ts';
+import { MoveButtons } from './MoveButtons.tsx';
 import { TaskCardBody } from './TaskCardBody.tsx';
 
 interface TaskCardProps {
@@ -65,7 +66,7 @@ export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps
           </button>
         </h3>
       </div>
-      <TaskCardBody task={task} />
+      <TaskCardBody task={task} actions={<MoveButtons taskId={taskId} title={task.title} />} />
     </article>
   );
 });

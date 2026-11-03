@@ -1,12 +1,14 @@
+import type { ReactNode } from 'react';
 import type { Task } from '../types.ts';
 import { PriorityBadge } from './PriorityBadge.tsx';
 
 interface TaskCardBodyProps {
   task: Task;
+  actions?: ReactNode; // shown at the end of the badge row
 }
 
 // The non-interactive part of a card, shared by the real card and the drag overlay.
-export function TaskCardBody({ task }: TaskCardBodyProps) {
+export function TaskCardBody({ task, actions }: TaskCardBodyProps) {
   return (
     <>
       {task.description && (
@@ -19,12 +21,13 @@ export function TaskCardBody({ task }: TaskCardBodyProps) {
             #{tag}
           </span>
         ))}
+        {actions}
       </div>
     </>
   );
 }
 
-export function TaskCardOverlay({ task }: TaskCardBodyProps) {
+export function TaskCardOverlay({ task }: { task: Task }) {
   return (
     <article className="rotate-2 cursor-grabbing rounded-lg border border-border bg-card p-3 shadow-lg">
       <h3 className="font-medium break-words">{task.title}</h3>

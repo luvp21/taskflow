@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { config } from './config.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { tasksRouter } from './routes/tasks.routes.js';
 
 // Building the app separately from listen() lets tests drive it with supertest
 // without opening a real port.
@@ -14,6 +15,8 @@ export function createApp() {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
   });
+
+  app.use('/api/tasks', tasksRouter);
 
   // Order matters: unmatched requests fall through to 404, and the error handler
   // must be registered last so every thrown error reaches it.

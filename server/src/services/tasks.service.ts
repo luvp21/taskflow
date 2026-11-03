@@ -1,8 +1,18 @@
-import mongoose from 'mongoose';
+import mongoose, { type ClientSession } from 'mongoose';
 import { TaskModel, type ColumnId, type Task } from '../models/Task.js';
-import type { CreateTaskInput, UpdateTaskInput } from '../schemas/task.schemas.js';
+import type {
+  CreateTaskInput,
+  MoveTaskInput,
+  UpdateTaskInput,
+} from '../schemas/task.schemas.js';
 import { HttpError } from '../utils/HttpError.js';
-import { computeOrderIndex } from './ordering.service.js';
+import {
+  computeOrderIndex,
+  findNeighbors,
+  needsRebalance,
+  rebalanceColumn,
+  type Neighbors,
+} from './ordering.service.js';
 
 const DUPLICATE_KEY_ERROR = 11000;
 
@@ -59,6 +69,60 @@ export async function updateTask(id: string, input: UpdateTaskInput): Promise<Ta
   ).lean<Task>();
 
   return task ?? throwNotFoundOrConflict(id);
+}
+
+// Version-guarded write of a card's new position.
+async function applyMove(
+  id: string,
+  columnId: ColumnId,
+  orderIndex: number,
+  version: number,
+  session: ClientSession | null = null,
+): Promise<Task> {
+  const task = await TaskModel.findOneAndUpdate(
+    { _id: id, version },
+    { $set: { columnId, orderIndex }, $inc: { version: 1 } },
+    { returnDocument: 'after', session },
+  ).lean<Task>();
+
+  return task ?? throwNotFoundOrConflict(id);
+}
+
+function orderIndexBetween({ prev, next }: Neighbors): number {
+  return computeOrderIndex(prev?.orderIndex ?? null, next?.orderIndex ?? null);
+}
+
+// Rare path: the gap between the neighbors is too small. Renumbering the column and
+// placing the card must succeed or fail together, so both run in one transaction.
+// withTransaction retries automatically on transient errors such as a write conflict
+// with another rebalance; a 404/409 thrown inside aborts and rolls everything back.
+async function moveWithRebalance(id: string, input: MoveTaskInput): Promise<Task> {
+  const session = await mongoose.startSession();
+  try {
+    return await session.withTransaction(async () => {
+      await rebalanceColumn(input.columnId, id, session);
+      const neighbors = await findNeighbors({ movingId: id, ...input }, session);
+      return applyMove(id, input.columnId, orderIndexBetween(neighbors), input.version, session);
+    });
+  } finally {
+    await session.endSession();
+  }
+}
+
+// The server, not the client, decides the final orderIndex, from the neighbors as
+// they are NOW. The normal path is a single atomic findOneAndUpdate, no transaction.
+export async function moveTask(
+  id: string,
+  input: MoveTaskInput,
+): Promise<{ task: Task; rebalanced: boolean }> {
+  const neighbors = await findNeighbors({ movingId: id, ...input });
+
+  if (needsRebalance(neighbors.prev?.orderIndex ?? null, neighbors.next?.orderIndex ?? null)) {
+    return { task: await moveWithRebalance(id, input), rebalanced: true };
+  }
+
+  const orderIndex = orderIndexBetween(neighbors);
+  return { task: await applyMove(id, input.columnId, orderIndex, input.version), rebalanced: false };
 }
 
 export async function deleteTask(id: string): Promise<void> {

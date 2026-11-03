@@ -1,4 +1,5 @@
 import { Board } from './components/Board.tsx';
+import { Toaster } from './components/Toaster.tsx';
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
       <main className="p-4 sm:p-6">
         <Board />
       </main>
+      <Toaster />
     </div>
   );
 }

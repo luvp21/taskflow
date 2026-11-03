@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>TaskFlow</title>
+    <!--
+      Zero-flicker theme. A plain (non-module) script in <head> runs and blocks
+      rendering before the browser paints anything, so the right theme is on <html>
+      from the very first frame. A module script or a React effect would run after
+      the first paint and flash the light theme. Must stay in sync with
+      src/lib/theme.ts (same storage key and class name).
+    -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          var dark =
+            saved === 'dark' ||
+            (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.toggle('dark', dark);
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (error) {
+          // Storage blocked (e.g. some private modes): keep the default light theme.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

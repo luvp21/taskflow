@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   DESCRIPTION_MAX,
   TITLE_MAX,
@@ -27,15 +27,23 @@ export function TaskForm({ initialValues, submitLabel, onSubmit, onCancel, foote
   const id = useId();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<TaskFormErrors>({});
+  // Double-submit guard. Two clicks in the same frame both run before React
+  // re-renders, so state would still say "not submitted" for the second one; a ref
+  // changes immediately. Needed because each create gets a NEW client _id, so the
+  // server's idempotency can't merge two separate submits.
+  const submittedRef = useRef(false);
 
   const setField = (field: keyof TaskFormValues, value: string) =>
     setValues((current) => ({ ...current, [field]: value }));
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submittedRef.current) return;
     const nextErrors = validateTaskForm(values);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) onSubmit(toTaskFields(values));
+    if (Object.keys(nextErrors).length > 0) return;
+    submittedRef.current = true;
+    onSubmit(toTaskFields(values));
   }
 
   const fieldProps = (field: keyof TaskFormErrors) => ({

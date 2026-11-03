@@ -124,7 +124,8 @@ describe('boardStore', () => {
       serverTask({ _id: 'y', columnId: 'done', orderIndex: 2000 }),
     ]);
     await store().loadTasks();
-    vi.mocked(api.moveTask).mockReturnValue(new Promise(() => {}));
+    const response = deferred<api.MoveResult>();
+    vi.mocked(api.moveTask).mockReturnValue(response.promise);
     const placement = { columnId: 'done' as const, beforeId: 'x', afterId: 'y' };
 
     store().moveTask('a', placement);
@@ -133,6 +134,52 @@ describe('boardStore', () => {
     expect(store().view.columns).toMatchObject({ todo: [], done: ['x', 'a', 'y'] });
     expect(store().view.tasksById.a.orderIndex).toBe(1500);
     expect(api.moveTask).toHaveBeenCalledWith('a', placement, 3);
+
+    // The sync engine is a module-level singleton: settle the request so this
+    // card's queue is empty for the next test.
+    response.resolve({ task: serverTask({ columnId: 'done', orderIndex: 1500, version: 4 }), rebalanced: false });
+    await flush();
+  });
+
+  it('five rapid moves of one card: pending keeps only the in-flight and the latest, and the card ends at the last move', async () => {
+    const responses: ReturnType<typeof deferred<api.MoveResult>>[] = [];
+    vi.mocked(api.moveTask).mockImplementation(() => {
+      const response = deferred<api.MoveResult>();
+      responses.push(response);
+      return response.promise;
+    });
+    const columns = ['in_progress', 'done', 'todo', 'in_progress', 'done'] as const;
+
+    for (const columnId of columns) store().moveTask('a', { columnId, beforeId: null, afterId: null });
+    await flush();
+
+    expect(store().pending).toHaveLength(2);
+    expect(store().view.tasksById.a.columnId).toBe('done');
+
+    responses[0].resolve({ task: serverTask({ columnId: 'in_progress', version: 4 }), rebalanced: false });
+    await flush();
+    expect(api.moveTask).toHaveBeenLastCalledWith('a', { columnId: 'done', beforeId: null, afterId: null }, 4);
+    responses[1].resolve({ task: serverTask({ columnId: 'done', version: 5 }), rebalanced: false });
+    await flush();
+
+    expect(api.moveTask).toHaveBeenCalledTimes(2);
+    expect(store().pending).toHaveLength(0);
+    expect(store().view.tasksById.a).toMatchObject({ columnId: 'done', version: 5 });
+  });
+
+  it('refetches the board when the server says it rebalanced the column', async () => {
+    vi.mocked(api.moveTask).mockResolvedValue({ task: serverTask({ columnId: 'done', version: 4 }), rebalanced: true });
+    vi.mocked(api.fetchTasks).mockResolvedValue([
+      serverTask({ columnId: 'done', version: 4 }),
+      serverTask({ _id: 'z', columnId: 'done', orderIndex: 2000, version: 0 }),
+    ]);
+
+    store().moveTask('a', { columnId: 'done', beforeId: null, afterId: null });
+    await flush();
+
+    expect(api.fetchTasks).toHaveBeenCalledTimes(2); // initial load + refetch
+    expect(store().view.columns.done).toEqual(['a', 'z']);
+    expect(store().status).toBe('ready');
   });
 
   it('reports a load failure without throwing', async () => {

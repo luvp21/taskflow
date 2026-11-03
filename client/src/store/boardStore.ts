@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { ApiError, errorMessage } from '../api/http.ts';
 import * as api from '../api/tasks.ts';
+import { mergeFetched } from '../lib/mergeTasks.ts';
 import { failureMessage, opTaskId } from '../lib/ops.ts';
 import { computeOrderIndex } from '../lib/ordering.ts';
 import { sendOp } from '../sync/sendOp.ts';
-import { createSyncEngine } from '../sync/syncEngine.ts';
+import { createSyncEngine, type SendResult } from '../sync/syncEngine.ts';
 import type { BoardView, ColumnId, Op, Placement, Task, TaskChanges, TasksById } from '../types.ts';
 import { applyOps } from './applyOps.ts';
 import { useUiStore } from './uiStore.ts';
@@ -37,7 +38,7 @@ export const useBoardStore = create<BoardState>()((set, get) => ({
     set({ status: 'loading', loadError: null });
     try {
       const tasks = await api.fetchTasks();
-      setBoard(Object.fromEntries(tasks.map((task) => [task._id, task])), get().pending);
+      setBoard(mergeFetched(get().confirmed, tasks), get().pending);
       set({ status: 'ready' });
     } catch (error) {
       set({ status: 'error', loadError: errorMessage(error) });
@@ -122,9 +123,22 @@ function conflictTask(error: unknown): Task | null {
   return body && typeof body === 'object' && 'task' in body ? (body.task as Task) : null;
 }
 
-function handleSuccess(op: Op, task: Task | null) {
+// After a rebalance the server renumbered every card in a column, so our copies of
+// the others are stale. Refetch quietly (no loading skeleton); pending ops are
+// re-applied on top by applyOps, so in-flight changes stay visible.
+async function refreshTasks() {
+  try {
+    const tasks = await api.fetchTasks();
+    setBoard(mergeFetched(getBoard().confirmed, tasks), getBoard().pending);
+  } catch {
+    showToast('Couldn\'t refresh the board. Reload to see the latest order.');
+  }
+}
+
+function handleSuccess(op: Op, { task, rebalanced }: SendResult) {
   const { confirmed } = getBoard();
   removeOp(op.opId, task ? withTask(confirmed, task) : withoutTask(confirmed, opTaskId(op)));
+  if (rebalanced) void refreshTasks();
 }
 
 function handleError(op: Op, error: unknown) {
@@ -151,6 +165,9 @@ const engine = createSyncEngine({
   send: (op) => sendOp(op, confirmedVersion),
   onSuccess: handleSuccess,
   onError: handleError,
+  // A newer move replaced this one before it was sent. Its effect is already covered
+  // by the newer op, so it just leaves pending (no request, no toast).
+  onReplaced: (replaced) => removeOp(replaced.opId),
 });
 
 function dispatch(op: Op) {

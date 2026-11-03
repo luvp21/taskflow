@@ -34,6 +34,7 @@ const TEXT_PAIRS: [string, string, string][] = [
   ['priority-low-fg', 'priority-low-bg', 'Low badge'],
   ['priority-medium-fg', 'priority-medium-bg', 'Medium badge'],
   ['priority-high-fg', 'priority-high-bg', 'High badge'],
+  ['fg', 'highlight', 'search match in a title'],
 ];
 
 const AA_TEXT = 4.5;

@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import { memo, type CSSProperties } from 'react';
 import { opTaskId } from '../lib/ops.ts';
 import { useBoardStore } from '../store/boardStore.ts';
+import { useUiStore } from '../store/uiStore.ts';
+import { Highlight } from './Highlight.tsx';
 import { MoveButtons } from './MoveButtons.tsx';
 import { TaskCardBody } from './TaskCardBody.tsx';
 
@@ -28,6 +30,7 @@ export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps
   const task = useBoardStore((state) => state.view.tasksById[taskId]);
   // A boolean selector: the card re-renders only when it starts or stops syncing.
   const isSyncing = useBoardStore((state) => state.pending.some((op) => opTaskId(op) === taskId));
+  const query = useUiStore((state) => state.filters.query);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: taskId });
   if (!task) return null;
@@ -65,7 +68,7 @@ export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps
             onClick={() => onOpen(taskId)}
             className="text-left after:absolute after:inset-0 after:rounded-lg focus:outline-none"
           >
-            {task.title}
+            <Highlight text={task.title} query={query} />
           </button>
         </h3>
         {isSyncing && (

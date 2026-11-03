@@ -37,4 +37,5 @@ minimum.
 | `priority-low-fg` on `priority-low-bg` | Low badge | 6.08 | 8.05 |
 | `priority-medium-fg` on `priority-medium-bg` | Medium badge | 7.06 | 8.71 |
 | `priority-high-fg` on `priority-high-bg` | High badge | 6.55 | 8.56 |
+| `fg` on `highlight` | Search match in a title | 13.06 | 7.34 |
 | `accent` vs `card` (focus ring, non-text, needs 3:1) | Focus outlines | 5.90 | 6.69 |

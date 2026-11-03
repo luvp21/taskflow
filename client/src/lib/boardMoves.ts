@@ -55,7 +55,14 @@ export function moveInPreview(columns: BoardColumns, activeId: string, overId: s
 
 // Where a "Move up/down/left/right" button puts the card. Left/right keep the same
 // row when possible. Returns null when the card is already at that edge.
-export function stepPlacement(columns: BoardColumns, id: string, direction: MoveDirection): Placement | null {
+// `columnOrder` is the columns left/right can move between (the visible ones when
+// a column filter is active).
+export function stepPlacement(
+  columns: BoardColumns,
+  id: string,
+  direction: MoveDirection,
+  columnOrder: readonly ColumnId[] = COLUMN_IDS,
+): Placement | null {
   const columnId = findColumn(columns, id);
   if (!columnId) return null;
   const ids = columns[columnId];
@@ -70,7 +77,7 @@ export function stepPlacement(columns: BoardColumns, id: string, direction: Move
     return { columnId, beforeId: ids[index + 1], afterId: ids[index + 2] ?? null };
   }
 
-  const targetColumn = COLUMN_IDS[COLUMN_IDS.indexOf(columnId) + (direction === 'left' ? -1 : 1)];
+  const targetColumn = columnOrder[columnOrder.indexOf(columnId) + (direction === 'left' ? -1 : 1)];
   if (!targetColumn) return null;
   const target = columns[targetColumn];
   const row = Math.min(index, target.length);

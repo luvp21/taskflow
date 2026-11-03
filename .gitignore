@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (the .env.example files are committed)
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage/
+
+# Local notes and instructions, kept off the repo
+AI_NOTES.md
+pr-notes/
+CLAUDE.md
+PLAN.md
+START_HERE.md
+
+# Logs and OS/editor files
+*.log
+.DS_Store
+.vscode/
+.idea/

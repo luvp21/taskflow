@@ -39,7 +39,7 @@ describe('applyOps', () => {
     const pending: Op[] = [
       { kind: 'create', opId: '1', task: task('new', { orderIndex: 3000 }) },
       { kind: 'update', opId: '2', taskId: 'a', changes: { title: 'Renamed' } },
-      { kind: 'move', opId: '3', taskId: 'b', columnId: 'done', orderIndex: 1000 },
+      { kind: 'move', opId: '3', taskId: 'b', columnId: 'done', orderIndex: 1000, beforeId: null, afterId: null },
       { kind: 'delete', opId: '4', taskId: 'a' },
     ];
 
@@ -86,10 +86,38 @@ describe('applyOps', () => {
     });
   });
 
+  it('two moves of one card in flight, the first fails: the card shows the second move', () => {
+    const confirmed = byId(task('a'), task('x', { columnId: 'done' }));
+    const firstMove: Op = { kind: 'move', opId: '1', taskId: 'a', columnId: 'in_progress', orderIndex: 1000, beforeId: null, afterId: null };
+    const secondMove: Op = { kind: 'move', opId: '2', taskId: 'a', columnId: 'done', orderIndex: 2000, beforeId: 'x', afterId: null };
+
+    // The first move failed, so only it is removed from pending.
+    const view = applyOps(confirmed, [secondMove]);
+
+    expect(view.columns).toEqual({ todo: [], in_progress: [], done: ['x', 'a'] });
+    expect(applyOps(confirmed, [firstMove, secondMove]).columns).toEqual(view.columns);
+  });
+
+  it('create then failed create: the card disappears', () => {
+    const confirmed = byId(task('a'));
+    const create: Op = { kind: 'create', opId: '1', task: task('new', { orderIndex: 2000 }) };
+
+    expect(applyOps(confirmed, [create]).columns.todo).toEqual(['a', 'new']);
+    expect(applyOps(confirmed, []).columns.todo).toEqual(['a']);
+  });
+
+  it('delete fails: the card reappears in its old position', () => {
+    const confirmed = byId(task('a', { orderIndex: 1000 }), task('b', { orderIndex: 2000 }), task('c', { orderIndex: 3000 }));
+    const remove: Op = { kind: 'delete', opId: '1', taskId: 'b' };
+
+    expect(applyOps(confirmed, [remove]).columns.todo).toEqual(['a', 'c']);
+    expect(applyOps(confirmed, []).columns.todo).toEqual(['a', 'b', 'c']);
+  });
+
   it('skips ops on a task that no longer exists', () => {
     const view = applyOps({}, [
       { kind: 'update', opId: '1', taskId: 'gone', changes: { title: 'x' } },
-      { kind: 'move', opId: '2', taskId: 'gone', columnId: 'done', orderIndex: 1 },
+      { kind: 'move', opId: '2', taskId: 'gone', columnId: 'done', orderIndex: 1, beforeId: null, afterId: null },
     ]);
 
     expect(view.tasksById).toEqual({});

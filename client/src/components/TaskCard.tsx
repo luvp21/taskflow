@@ -1,43 +1,71 @@
-import { memo } from 'react';
+import { useSortable } from '@dnd-kit/sortable';
+import clsx from 'clsx';
+import { memo, type CSSProperties } from 'react';
 import { useBoardStore } from '../store/boardStore.ts';
-import { PriorityBadge } from './PriorityBadge.tsx';
+import { TaskCardBody } from './TaskCardBody.tsx';
 
 interface TaskCardProps {
   taskId: string;
   onOpen: (taskId: string) => void;
 }
 
+function GripIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4 fill-current">
+      <circle cx="5" cy="3" r="1.5" /><circle cx="11" cy="3" r="1.5" />
+      <circle cx="5" cy="8" r="1.5" /><circle cx="11" cy="8" r="1.5" />
+      <circle cx="5" cy="13" r="1.5" /><circle cx="11" cy="13" r="1.5" />
+    </svg>
+  );
+}
+
 // memo + a selector for this one task: the card re-renders only when its own task
-// object changes. applyOps keeps unchanged tasks as the same object, so editing one
-// card doesn't re-render the others. (onOpen must be stable, see Board.)
+// changes. Drag wiring: pointer listeners on the whole card (drag from anywhere;
+// a click under 5px still opens it), keyboard drag only from the grip button.
 export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps) {
   const task = useBoardStore((state) => state.view.tasksById[taskId]);
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id: taskId });
   if (!task) return null;
 
-  // The title button is stretched over the whole card (after:inset-0), so the card
-  // is clickable but screen readers hear just the title as the button name.
+  const style: CSSProperties = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+  };
+
   return (
-    <article className="relative rounded-lg border border-border bg-card p-3 shadow-sm hover:border-muted has-focus-visible:ring-2 has-focus-visible:ring-accent">
-      <h3 className="font-medium break-words">
-        <button
-          type="button"
-          onClick={() => onOpen(taskId)}
-          className="text-left after:absolute after:inset-0 after:rounded-lg focus:outline-none"
-        >
-          {task.title}
-        </button>
-      </h3>
-      {task.description && (
-        <p className="mt-1 line-clamp-2 text-sm break-words text-muted">{task.description}</p>
+    <article
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      className={clsx(
+        'group relative rounded-lg border border-border bg-card p-3 shadow-sm hover:border-muted has-focus-visible:ring-2 has-focus-visible:ring-accent',
+        isDragging && 'opacity-40',
       )}
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <PriorityBadge priority={task.priority} />
-        {task.tags.map((tag) => (
-          <span key={tag} className="rounded bg-panel px-1.5 py-0.5 text-xs text-muted">
-            #{tag}
-          </span>
-        ))}
+    >
+      <div className="flex items-start gap-1">
+        <button
+          ref={setActivatorNodeRef}
+          {...attributes}
+          type="button"
+          data-card-handle={taskId}
+          aria-label={`Drag “${task.title}”`}
+          className="relative z-10 -ml-1 cursor-grab rounded p-0.5 text-muted hover:text-fg focus:outline-none"
+        >
+          <GripIcon />
+        </button>
+        {/* Stretched over the card (after:inset-0): click anywhere opens it. */}
+        <h3 className="min-w-0 flex-1 font-medium break-words">
+          <button
+            type="button"
+            onClick={() => onOpen(taskId)}
+            className="text-left after:absolute after:inset-0 after:rounded-lg focus:outline-none"
+          >
+            {task.title}
+          </button>
+        </h3>
       </div>
+      <TaskCardBody task={task} />
     </article>
   );
 });

@@ -1,7 +1,14 @@
 @import 'tailwindcss';
 
+/* `dark:` utilities apply when the <html> element (or an ancestor) has class
+   "dark", which the inline script in index.html sets before the first paint.
+   :where() keeps the selector's specificity at zero. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Color tokens. Components only use these (bg-card, text-muted, ...), never raw
-   palette colors, so a theme is just a different set of values here. */
+   palette colors, so switching theme only swaps the values below.
+   Every text/background pair is checked against WCAG AA (4.5:1) by
+   src/theme.contrast.test.ts. */
 :root {
   color-scheme: light;
   --surface: #f4f5f7;
@@ -22,8 +29,28 @@
   --priority-high-fg: #9f1c1c;
 }
 
+.dark {
+  color-scheme: dark;
+  --surface: #0f141c;
+  --panel: #18202b;
+  --card: #212b38;
+  --fg: #e6ebf2;
+  --muted: #a6b0bf;
+  --border: #334155;
+  --accent: #8fb0ff;
+  --accent-fg: #0b1430;
+  --danger: #ff8f85;
+  --danger-fg: #2a0707;
+  --priority-low-bg: #163a24;
+  --priority-low-fg: #8fe0a8;
+  --priority-medium-bg: #3d2f0b;
+  --priority-medium-fg: #f5cf6b;
+  --priority-high-bg: #4a1a1a;
+  --priority-high-fg: #ffb4b4;
+}
+
 /* `inline` makes each utility use the variable itself, so changing a variable
-   (e.g. under .dark later) updates every element that uses it. */
+   (under .dark) updates every element that uses it, with no rebuild. */
 @theme inline {
   --color-surface: var(--surface);
   --color-panel: var(--panel);

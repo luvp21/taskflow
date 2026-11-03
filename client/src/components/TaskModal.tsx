@@ -70,7 +70,7 @@ export function TaskModal({ target, onClose }: TaskModalProps) {
       aria-labelledby="task-modal-title"
       onCancel={handleCancel}
       onClick={handleBackdropClick}
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl bg-card p-0 text-fg shadow-xl backdrop:bg-black/50"
+      className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-xl bg-card p-0 text-fg shadow-xl backdrop:bg-black/50 dark:backdrop:bg-black/70"
     >
       <div className="p-5">
         <h2 id="task-modal-title" className="mb-4 text-lg font-semibold">

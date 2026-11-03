@@ -12,6 +12,11 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
+    rules: {
+      // A leading underscore marks a parameter that must exist but isn't used, e.g.
+      // Express only treats a middleware as an error handler if it declares 4 args.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
   },
   {
     files: ['client/**/*.{ts,tsx}'],

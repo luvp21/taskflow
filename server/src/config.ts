@@ -14,6 +14,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   MONGODB_URI: z.string().min(1).default(LOCAL_MONGODB_URI),
+  CHAOS_ENABLED: z.enum(['true', 'false']).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -23,4 +24,12 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const config = parsed.data;
+const { CHAOS_ENABLED, ...env } = parsed.data;
+
+export const config = {
+  ...env,
+  // Chaos only reacts to requests that send the x-chaos-* headers, so it is on by
+  // default outside production (the README quick start has no .env) and must be
+  // switched on explicitly in production.
+  CHAOS_ENABLED: CHAOS_ENABLED ? CHAOS_ENABLED === 'true' : env.NODE_ENV !== 'production',
+};

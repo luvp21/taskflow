@@ -1,6 +1,7 @@
 import { closestCorners, DndContext, DragOverlay } from '@dnd-kit/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useBoardDrag } from '../hooks/useBoardDrag.ts';
+import { useVisibleColumnIds } from '../hooks/useFilteredView.ts';
 import { dragAnnouncements } from '../lib/dragAnnouncements.ts';
 import { useBoardStore } from '../store/boardStore.ts';
 import { COLUMNS, type ColumnId } from '../types.ts';
@@ -15,6 +16,7 @@ export function Board() {
   const loadTasks = useBoardStore((state) => state.loadTasks);
   const [modal, setModal] = useState<ModalTarget | null>(null);
   const drag = useBoardDrag();
+  const columnIds = useVisibleColumnIds();
   const activeTask = useBoardStore((state) => (drag.activeId ? state.view.tasksById[drag.activeId] : undefined));
 
   useEffect(() => {
@@ -44,9 +46,10 @@ export function Board() {
       onDragEnd={drag.handleDragEnd}
       onDragCancel={drag.handleDragCancel}
     >
-      {/* Phones: columns side by side with horizontal scroll and snap. md+: shared width. */}
+      {/* Phones: columns side by side with horizontal scroll and snap. md+: the visible
+          columns share the width, so hiding one with a filter widens the others. */}
       <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:snap-none">
-        {COLUMNS.map((column) => (
+        {COLUMNS.filter((column) => columnIds.includes(column.id)).map((column) => (
           <Column
             key={column.id}
             columnId={column.id}

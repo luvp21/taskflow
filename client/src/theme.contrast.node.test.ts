@@ -26,6 +26,7 @@ const TEXT_PAIRS: [string, string, string][] = [
   ['muted', 'panel', 'tags, empty column text'],
   ['muted', 'card', 'card descriptions, counts, hints'],
   ['accent-fg', 'accent', 'primary buttons, selected chips'],
+  ['accent', 'surface', 'Clear all link'],
   ['danger-fg', 'danger', 'delete button'],
   ['danger', 'card', 'form errors, Delete link'],
   ['danger', 'panel', 'Delete link on hover'],
@@ -33,6 +34,7 @@ const TEXT_PAIRS: [string, string, string][] = [
   ['priority-low-fg', 'priority-low-bg', 'Low badge'],
   ['priority-medium-fg', 'priority-medium-bg', 'Medium badge'],
   ['priority-high-fg', 'priority-high-bg', 'High badge'],
+  ['fg', 'highlight', 'search match in a title'],
 ];
 
 const AA_TEXT = 4.5;

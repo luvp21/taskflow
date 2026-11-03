@@ -1,5 +1,6 @@
 import { Board } from './components/Board.tsx';
 import { ChaosPanel } from './components/ChaosPanel.tsx';
+import { FilterBar } from './components/FilterBar.tsx';
 import { ThemeToggle } from './components/ThemeToggle.tsx';
 import { Toaster } from './components/Toaster.tsx';
 
@@ -13,6 +14,7 @@ function App() {
           <ThemeToggle />
         </div>
       </header>
+      <FilterBar />
       <main className="p-4 sm:p-6">
         <Board />
       </main>

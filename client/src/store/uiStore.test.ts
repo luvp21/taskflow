@@ -20,3 +20,20 @@ describe('toasts', () => {
     expect(useUiStore.getState().toasts).toEqual([second]);
   });
 });
+
+describe('filters', () => {
+  it('toggles chips on and off and clears everything', () => {
+    const { togglePriority, toggleColumn, setQuery } = useUiStore.getState();
+
+    togglePriority('high');
+    togglePriority('low');
+    togglePriority('high');
+    toggleColumn('done');
+    setQuery('auth');
+
+    expect(useUiStore.getState().filters).toEqual({ query: 'auth', priorities: ['low'], columns: ['done'] });
+
+    useUiStore.getState().clearFilters();
+    expect(useUiStore.getState().filters).toEqual({ query: '', priorities: [], columns: [] });
+  });
+});

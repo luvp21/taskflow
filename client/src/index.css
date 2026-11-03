@@ -27,6 +27,7 @@
   --priority-medium-fg: #74470a;
   --priority-high-bg: #fde4e4;
   --priority-high-fg: #9f1c1c;
+  --highlight: #fde68a;
 }
 
 .dark {
@@ -47,6 +48,7 @@
   --priority-medium-fg: #f5cf6b;
   --priority-high-bg: #4a1a1a;
   --priority-high-fg: #ffb4b4;
+  --highlight: #5c4810;
 }
 
 /* `inline` makes each utility use the variable itself, so changing a variable
@@ -68,6 +70,7 @@
   --color-priority-medium-fg: var(--priority-medium-fg);
   --color-priority-high-bg: var(--priority-high-bg);
   --color-priority-high-fg: var(--priority-high-fg);
+  --color-highlight: var(--highlight);
 }
 
 body {

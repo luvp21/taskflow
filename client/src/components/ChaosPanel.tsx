@@ -1,9 +1,7 @@
 import clsx from 'clsx';
 import { FAIL_RATE_OPTIONS, LATENCY_OPTIONS } from '../lib/chaos.ts';
 import { useUiStore } from '../store/uiStore.ts';
-
-const CHIP_CLASS =
-  'rounded-full border px-3 py-1 text-xs font-medium focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none';
+import { Chip } from './Chip.tsx';
 
 interface ChipGroupProps {
   label: string;
@@ -19,18 +17,9 @@ function ChipGroup({ label, options, value, format, onChange }: ChipGroupProps) 
       <legend className="mb-1.5 text-xs font-semibold text-muted">{label}</legend>
       <div className="flex flex-wrap gap-1.5">
         {options.map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === value}
-            onClick={() => onChange(option)}
-            className={clsx(
-              CHIP_CLASS,
-              option === value ? 'border-accent bg-accent text-accent-fg' : 'border-border hover:bg-panel',
-            )}
-          >
+          <Chip key={option} pressed={option === value} onClick={() => onChange(option)}>
             {format(option)}
-          </button>
+          </Chip>
         ))}
       </div>
     </fieldset>

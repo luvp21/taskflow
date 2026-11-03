@@ -60,6 +60,19 @@ describe('stepPlacement', () => {
     expect(stepPlacement(board, 'c', 'right')).toEqual({ columnId: 'in_progress', beforeId: 'd', afterId: null });
   });
 
+  it('skips columns that are not in the given order (hidden by a column filter)', () => {
+    expect(stepPlacement(board, 'a', 'right', ['todo', 'done'])).toEqual({ columnId: 'done', beforeId: null, afterId: null });
+    expect(stepPlacement(board, 'd', 'left', ['in_progress', 'done'])).toBeNull();
+  });
+
+  it('with search active, neighbors come from the visible cards only', () => {
+    // Only a and c match the search; b is hidden between them.
+    const visible: BoardColumns = { todo: ['a', 'c'], in_progress: [], done: [] };
+
+    expect(stepPlacement(visible, 'c', 'up')).toEqual({ columnId: 'todo', beforeId: null, afterId: 'a' });
+    expect(placementOf(visible, 'a')).toEqual({ columnId: 'todo', beforeId: null, afterId: 'c' });
+  });
+
   it('returns null at the edges', () => {
     expect(stepPlacement(board, 'a', 'up')).toBeNull();
     expect(stepPlacement(board, 'c', 'down')).toBeNull();

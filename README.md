@@ -29,6 +29,7 @@ minimum.
 | `muted` on `panel` | Tags, empty column text | 6.29 | 7.49 |
 | `muted` on `card` | Card descriptions, counts | 7.51 | 6.53 |
 | `accent-fg` on `accent` | Primary buttons, selected chips | 5.90 | 8.49 |
+| `accent` on `surface` | Clear all link | 5.41 | 8.64 |
 | `danger-fg` on `danger` | Delete button | 6.57 | 8.41 |
 | `danger` on `card` | Form errors, Delete link | 6.57 | 6.49 |
 | `danger` on `panel` | Delete link on hover | 5.50 | 7.44 |
@@ -36,4 +37,5 @@ minimum.
 | `priority-low-fg` on `priority-low-bg` | Low badge | 6.08 | 8.05 |
 | `priority-medium-fg` on `priority-medium-bg` | Medium badge | 7.06 | 8.71 |
 | `priority-high-fg` on `priority-high-bg` | High badge | 6.55 | 8.56 |
+| `fg` on `highlight` | Search match in a title | 13.06 | 7.34 |
 | `accent` vs `card` (focus ring, non-text, needs 3:1) | Focus outlines | 5.90 | 6.69 |

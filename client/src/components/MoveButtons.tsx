@@ -1,6 +1,9 @@
 import { useShallow } from 'zustand/react/shallow';
 import { stepPlacement, type MoveDirection } from '../lib/boardMoves.ts';
+import { visibleColumnIds, visibleColumns, type Filters } from '../lib/filters.ts';
 import { useBoardStore } from '../store/boardStore.ts';
+import { useUiStore } from '../store/uiStore.ts';
+import type { BoardView } from '../types.ts';
 
 const BUTTONS: { direction: MoveDirection; symbol: string; label: string }[] = [
   { direction: 'left', symbol: '←', label: 'left' },
@@ -25,20 +28,27 @@ interface MoveButtonsProps {
   title: string;
 }
 
+// Steps over the cards and columns the user can SEE, so "up" never swaps with a
+// hidden card (which would look like nothing happened).
+function stepVisible(view: BoardView, filters: Filters, taskId: string, direction: MoveDirection) {
+  return stepPlacement(visibleColumns(view, filters), taskId, direction, visibleColumnIds(filters));
+}
+
 // The non-drag way to move a card (keyboard, touch, precise moves). Uses the same
 // store action as drag and drop. Hidden until the card is hovered or focused,
 // always visible on touch screens.
 export function MoveButtons({ taskId, title }: MoveButtonsProps) {
+  const filters = useUiStore((state) => state.filters);
   // useShallow: re-render only when one of these four booleans flips.
   const canMove = useBoardStore(
     useShallow((state) =>
-      BUTTONS.map(({ direction }) => stepPlacement(state.view.columns, taskId, direction) !== null),
+      BUTTONS.map(({ direction }) => stepVisible(state.view, filters, taskId, direction) !== null),
     ),
   );
 
   function move(direction: MoveDirection) {
     const { view, moveTask } = useBoardStore.getState();
-    const placement = stepPlacement(view.columns, taskId, direction);
+    const placement = stepVisible(view, filters, taskId, direction);
     if (!placement) return;
     moveTask(taskId, placement);
     restoreFocus(taskId, direction);

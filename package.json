@@ -1,0 +1,15 @@
+{
+  "name": "taskflow",
+  "private": true,
+  "workspaces": [
+    "server"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "build": "npm run build --workspaces"
+  }
+}

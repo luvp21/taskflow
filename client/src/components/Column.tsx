@@ -1,8 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import clsx from 'clsx';
-import { useShallow } from 'zustand/react/shallow';
-import { useBoardStore } from '../store/boardStore.ts';
+import { useIsFiltering, useVisibleTaskIds } from '../hooks/useFilteredView.ts';
 import type { ColumnId } from '../types.ts';
 import { TaskCard } from './TaskCard.tsx';
 
@@ -15,10 +14,11 @@ interface ColumnProps {
 }
 
 export function Column({ columnId, title, previewIds, onAdd, onOpenTask }: ColumnProps) {
-  // applyOps builds new id arrays on every change; useShallow compares the ids
-  // inside, so this column re-renders only when ITS list actually changed.
-  const storeIds = useBoardStore(useShallow((state) => state.view.columns[columnId]));
-  const taskIds = previewIds ?? storeIds;
+  // Only the cards that pass the filters; the column re-renders only when this
+  // list changes (see useVisibleTaskIds).
+  const visibleIds = useVisibleTaskIds(columnId);
+  const filtering = useIsFiltering();
+  const taskIds = previewIds ?? visibleIds;
   // The column itself is a drop target, so empty columns accept cards too.
   const { setNodeRef, isOver } = useDroppable({ id: columnId });
   const headingId = `column-${columnId}`;
@@ -52,7 +52,7 @@ export function Column({ columnId, title, previewIds, onAdd, onOpenTask }: Colum
         >
           {taskIds.length === 0 && (
             <li className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted">
-              No cards yet
+              {filtering ? 'No matching cards' : 'No cards yet'}
             </li>
           )}
           {taskIds.map((id) => (

@@ -29,6 +29,7 @@ minimum.
 | `muted` on `panel` | Tags, empty column text | 6.29 | 7.49 |
 | `muted` on `card` | Card descriptions, counts | 7.51 | 6.53 |
 | `accent-fg` on `accent` | Primary buttons, selected chips | 5.90 | 8.49 |
+| `accent` on `surface` | Clear all link | 5.41 | 8.64 |
 | `danger-fg` on `danger` | Delete button | 6.57 | 8.41 |
 | `danger` on `card` | Form errors, Delete link | 6.57 | 6.49 |
 | `danger` on `panel` | Delete link on hover | 5.50 | 7.44 |

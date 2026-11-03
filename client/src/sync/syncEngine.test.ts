@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Op, Task } from '../types.ts';
-import { createSyncEngine } from './syncEngine.ts';
+import type { Op } from '../types.ts';
+import { createSyncEngine, type SendResult } from './syncEngine.ts';
 
 const update = (opId: string, taskId: string): Op => ({ kind: 'update', opId, taskId, changes: { title: opId } });
 const move = (opId: string, taskId: string): Op => ({
@@ -19,8 +19,8 @@ function controllableSend() {
   const calls: { op: Op; resolve: () => void; reject: (e: unknown) => void }[] = [];
   const send = vi.fn(
     (op: Op) =>
-      new Promise<Task | null>((resolve, reject) => {
-        calls.push({ op, resolve: () => resolve(null), reject });
+      new Promise<SendResult>((resolve, reject) => {
+        calls.push({ op, resolve: () => resolve({ task: null, rebalanced: false }), reject });
       }),
   );
   return { send, calls };
@@ -71,7 +71,7 @@ describe('createSyncEngine', () => {
     await flush();
 
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ opId: '1' }), expect.any(Error));
-    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ opId: '2' }), null);
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ opId: '2' }), { task: null, rebalanced: false });
     expect(send).toHaveBeenCalledTimes(2); // no automatic retry
   });
 

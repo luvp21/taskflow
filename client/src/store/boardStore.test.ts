@@ -167,6 +167,21 @@ describe('boardStore', () => {
     expect(store().view.tasksById.a).toMatchObject({ columnId: 'done', version: 5 });
   });
 
+  it('refetches the board when the server says it rebalanced the column', async () => {
+    vi.mocked(api.moveTask).mockResolvedValue({ task: serverTask({ columnId: 'done', version: 4 }), rebalanced: true });
+    vi.mocked(api.fetchTasks).mockResolvedValue([
+      serverTask({ columnId: 'done', version: 4 }),
+      serverTask({ _id: 'z', columnId: 'done', orderIndex: 2000, version: 0 }),
+    ]);
+
+    store().moveTask('a', { columnId: 'done', beforeId: null, afterId: null });
+    await flush();
+
+    expect(api.fetchTasks).toHaveBeenCalledTimes(2); // initial load + refetch
+    expect(store().view.columns.done).toEqual(['a', 'z']);
+    expect(store().status).toBe('ready');
+  });
+
   it('reports a load failure without throwing', async () => {
     vi.mocked(api.fetchTasks).mockRejectedValue(new Error('Network error'));
 

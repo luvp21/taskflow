@@ -1,9 +1,14 @@
 import { opTaskId } from '../lib/ops.ts';
 import type { Op, Task } from '../types.ts';
 
+export interface SendResult {
+  task: Task | null; // the server's copy; null after a delete
+  rebalanced: boolean; // the server renumbered a column, so other cards changed too
+}
+
 export interface SyncHandlers {
-  send: (op: Op) => Promise<Task | null>;
-  onSuccess: (op: Op, task: Task | null) => void;
+  send: (op: Op) => Promise<SendResult>;
+  onSuccess: (op: Op, result: SendResult) => void;
   onError: (op: Op, error: unknown) => void;
   onReplaced: (replaced: Op) => void; // a queued move was superseded by a newer one
 }
@@ -18,14 +23,14 @@ export function createSyncEngine({ send, onSuccess, onError, onReplaced }: SyncH
   const queues = new Map<string, Op[]>();
 
   async function settle(op: Op) {
-    let task: Task | null;
+    let result: SendResult;
     try {
-      task = await send(op);
+      result = await send(op);
     } catch (error) {
       onError(op, error);
       return;
     }
-    onSuccess(op, task);
+    onSuccess(op, result);
   }
 
   async function runQueue(taskId: string) {

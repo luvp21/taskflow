@@ -40,8 +40,17 @@ export type Op =
   | { kind: 'delete'; opId: string; taskId: string };
 
 export type TasksById = Record<string, Task>;
+export type BoardColumns = Record<ColumnId, string[]>;
+
+// Where a card should land: its column and the cards directly above (beforeId) and
+// below (afterId) it, null at the edges. Same shape the move endpoint expects.
+export interface Placement {
+  columnId: ColumnId;
+  beforeId: string | null;
+  afterId: string | null;
+}
 
 export interface BoardView {
   tasksById: TasksById;
-  columns: Record<ColumnId, string[]>;
+  columns: BoardColumns;
 }

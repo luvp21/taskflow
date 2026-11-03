@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as api from '../api/tasks.ts';
 import { errorMessage } from '../api/http.ts';
 import { computeOrderIndex } from '../lib/ordering.ts';
-import type { BoardView, ColumnId, Op, Task, TaskChanges, TasksById } from '../types.ts';
+import type { BoardView, ColumnId, Op, Placement, Task, TaskChanges, TasksById } from '../types.ts';
 import { applyOps } from './applyOps.ts';
 
 type LoadStatus = 'loading' | 'error' | 'ready';
@@ -16,6 +16,7 @@ interface BoardState {
   loadTasks: () => Promise<void>;
   createTask: (columnId: ColumnId, fields: Required<TaskChanges>) => Promise<void>;
   updateTask: (id: string, changes: TaskChanges) => Promise<void>;
+  moveTask: (id: string, placement: Placement) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 }
 
@@ -105,6 +106,20 @@ export const useBoardStore = create<BoardState>()((set, get) => {
     async updateTask(id, changes) {
       await runOp({ kind: 'update', opId: crypto.randomUUID(), taskId: id, changes }, () =>
         api.updateTask(id, changes, confirmedVersion(id)),
+      );
+    },
+
+    // The optimistic orderIndex uses the same formula as the server, so the card
+    // lands exactly where it was dropped. The server still decides the final index
+    // from the neighbors as they are on the server.
+    async moveTask(id, placement) {
+      const { tasksById } = get().view;
+      const indexOf = (taskId: string | null) => (taskId ? (tasksById[taskId]?.orderIndex ?? null) : null);
+      const orderIndex = computeOrderIndex(indexOf(placement.beforeId), indexOf(placement.afterId));
+
+      await runOp(
+        { kind: 'move', opId: crypto.randomUUID(), taskId: id, columnId: placement.columnId, orderIndex },
+        async () => (await api.moveTask(id, placement, confirmedVersion(id))).task,
       );
     },
 

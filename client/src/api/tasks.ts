@@ -1,4 +1,4 @@
-import type { ColumnId, Task, TaskChanges } from '../types.ts';
+import type { ColumnId, Placement, Task, TaskChanges } from '../types.ts';
 import { request } from './http.ts';
 
 export interface CreateTaskInput extends Required<TaskChanges> {
@@ -18,6 +18,18 @@ export function createTask(input: CreateTaskInput): Promise<Task> {
 
 export function updateTask(id: string, changes: TaskChanges, version: number): Promise<Task> {
   return request<Task>(taskPath(id), { method: 'PATCH', body: { ...changes, version } });
+}
+
+export interface MoveResult {
+  task: Task;
+  rebalanced: boolean; // the server renumbered the column; other cards' indexes changed
+}
+
+export function moveTask(id: string, placement: Placement, version: number): Promise<MoveResult> {
+  return request<MoveResult>(`${taskPath(id)}/move`, {
+    method: 'PATCH',
+    body: { ...placement, version },
+  });
 }
 
 export function deleteTask(id: string): Promise<null> {

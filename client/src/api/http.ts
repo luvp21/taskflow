@@ -1,3 +1,6 @@
+import { chaosHeaders } from '../lib/chaos.ts';
+import { useUiStore } from '../store/uiStore.ts';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 // status 0 means the request never got a response (offline, DNS, CORS, server down).
@@ -30,6 +33,14 @@ async function readJson(res: Response): Promise<unknown> {
   return res.json().catch(() => null);
 }
 
+function headersFor(method: string, body: unknown): Record<string, string> {
+  return {
+    ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    // Chaos Panel settings only apply to writes; reads always behave normally.
+    ...(method === 'GET' ? {} : chaosHeaders(useUiStore.getState().chaos)),
+  };
+}
+
 // The response type is trusted, not validated: the server is ours and validates
 // its own output shape. Errors become ApiError so callers can branch on status.
 export async function request<T>(path: string, { method = 'GET', body }: RequestOptions = {}): Promise<T> {
@@ -37,7 +48,7 @@ export async function request<T>(path: string, { method = 'GET', body }: Request
   try {
     res = await fetch(`${API_URL}${path}`, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: headersFor(method, body),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

@@ -36,7 +36,15 @@ export type TaskChanges = Partial<Pick<Task, 'title' | 'description' | 'priority
 export type Op =
   | { kind: 'create'; opId: string; task: Task }
   | { kind: 'update'; opId: string; taskId: string; changes: TaskChanges }
-  | { kind: 'move'; opId: string; taskId: string; columnId: ColumnId; orderIndex: number }
+  | {
+      kind: 'move';
+      opId: string;
+      taskId: string;
+      columnId: ColumnId;
+      orderIndex: number; // optimistic position, for display only
+      beforeId: string | null; // what the server is sent
+      afterId: string | null;
+    }
   | { kind: 'delete'; opId: string; taskId: string };
 
 export type TasksById = Record<string, Task>;

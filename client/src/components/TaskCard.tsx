@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import clsx from 'clsx';
 import { memo, type CSSProperties } from 'react';
+import { opTaskId } from '../lib/ops.ts';
 import { useBoardStore } from '../store/boardStore.ts';
 import { MoveButtons } from './MoveButtons.tsx';
 import { TaskCardBody } from './TaskCardBody.tsx';
@@ -25,6 +26,8 @@ function GripIcon() {
 // a click under 5px still opens it), keyboard drag only from the grip button.
 export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps) {
   const task = useBoardStore((state) => state.view.tasksById[taskId]);
+  // A boolean selector: the card re-renders only when it starts or stops syncing.
+  const isSyncing = useBoardStore((state) => state.pending.some((op) => opTaskId(op) === taskId));
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: taskId });
   if (!task) return null;
@@ -65,6 +68,12 @@ export const TaskCard = memo(function TaskCard({ taskId, onOpen }: TaskCardProps
             {task.title}
           </button>
         </h3>
+        {isSyncing && (
+          <span className="mt-1.5 flex shrink-0 items-center" title="Saving…">
+            <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-accent" />
+            <span className="sr-only">Saving</span>
+          </span>
+        )}
       </div>
       <TaskCardBody task={task} actions={<MoveButtons taskId={taskId} title={task.title} />} />
     </article>

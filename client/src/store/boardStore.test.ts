@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../api/http.ts';
 import * as api from '../api/tasks.ts';
+import { opTaskId } from '../lib/ops.ts';
 import type { Task } from '../types.ts';
 import { useBoardStore } from './boardStore.ts';
+import { useUiStore } from './uiStore.ts';
 
 vi.mock('../api/tasks.ts');
 
-const initialState = useBoardStore.getState();
+const initialBoard = useBoardStore.getState();
+const initialUi = useUiStore.getState();
 
 function serverTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -23,7 +27,6 @@ function serverTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-// A promise the test resolves or rejects by hand, to inspect the in-flight state.
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error: unknown) => void;
@@ -35,11 +38,14 @@ function deferred<T>() {
 }
 
 const store = () => useBoardStore.getState();
+const toasts = () => useUiStore.getState().toasts.map((toast) => toast.message);
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const fields = { title: 'New card', description: '', priority: 'high' as const, tags: [] };
 
 beforeEach(async () => {
   vi.resetAllMocks();
-  useBoardStore.setState(initialState, true);
+  useBoardStore.setState(initialBoard, true);
+  useUiStore.setState(initialUi, true);
   vi.mocked(api.fetchTasks).mockResolvedValue([serverTask()]);
   await store().loadTasks();
 });
@@ -49,70 +55,84 @@ describe('boardStore', () => {
     const response = deferred<Task>();
     vi.mocked(api.createTask).mockReturnValue(response.promise);
 
-    const done = store().createTask('todo', fields);
+    store().createTask('todo', fields);
 
     expect(store().view.columns.todo).toHaveLength(2);
     expect(store().pending).toHaveLength(1);
 
     const sent = vi.mocked(api.createTask).mock.calls[0][0];
     response.resolve(serverTask({ _id: sent._id, title: 'New card', orderIndex: 2000, version: 0 }));
-    await done;
+    await flush();
 
     expect(store().pending).toHaveLength(0);
     expect(store().confirmed[sent._id]).toMatchObject({ title: 'New card' });
   });
 
-  it('removes a created card again when the request fails', async () => {
-    vi.mocked(api.createTask).mockRejectedValue(new Error('500'));
+  it('removes a failed create and names the card in a toast', async () => {
+    vi.mocked(api.createTask).mockRejectedValue(new ApiError(500, 'Internal server error'));
 
-    await expect(store().createTask('todo', fields)).rejects.toThrow('500');
+    store().createTask('todo', fields);
+    await flush();
 
     expect(store().view.columns.todo).toEqual(['a']);
-    expect(store().pending).toHaveLength(0);
+    expect(toasts()).toEqual(['Couldn\'t create “New card”. Reverted.']);
   });
 
-  it('puts a deleted card back when the delete fails', async () => {
-    const response = deferred<null>();
-    vi.mocked(api.deleteTask).mockReturnValue(response.promise);
+  it('puts a card back when its delete fails', async () => {
+    vi.mocked(api.deleteTask).mockRejectedValue(new ApiError(0, 'Network error'));
 
-    const done = store().deleteTask('a');
+    store().deleteTask('a');
     expect(store().view.columns.todo).toEqual([]);
-
-    response.reject(new Error('offline'));
-    await expect(done).rejects.toThrow('offline');
+    await flush();
 
     expect(store().view.columns.todo).toEqual(['a']);
+    expect(toasts()).toEqual(['Couldn\'t delete “Existing”. Reverted.']);
   });
 
-  it('sends the confirmed version and stores the server result', async () => {
-    vi.mocked(api.updateTask).mockResolvedValue(serverTask({ title: 'Renamed', version: 4 }));
+  it('on 409, shows the server copy and explains why', async () => {
+    const current = serverTask({ title: 'Renamed by someone else', version: 4 });
+    vi.mocked(api.updateTask).mockRejectedValue(new ApiError(409, 'Conflict', { error: 'Conflict', task: current }));
 
-    await store().updateTask('a', { title: 'Renamed' });
+    store().updateTask('a', { title: 'My title' });
+    await flush();
 
-    expect(api.updateTask).toHaveBeenCalledWith('a', { title: 'Renamed' }, 3);
-    expect(store().view.tasksById.a).toMatchObject({ title: 'Renamed', version: 4 });
+    expect(store().view.tasksById.a).toMatchObject({ title: 'Renamed by someone else', version: 4 });
+    expect(toasts()).toEqual(['This card changed elsewhere. Showing the latest version.']);
   });
 
-  it('moves a card between its new neighbors right away, then sends the placement', async () => {
+  it('queues an edit behind its own create and sends the version the create returned', async () => {
+    const created = deferred<Task>();
+    vi.mocked(api.createTask).mockReturnValue(created.promise);
+    vi.mocked(api.updateTask).mockResolvedValue(serverTask());
+
+    store().createTask('todo', fields);
+    const id = opTaskId(store().pending[0]);
+    store().updateTask(id, { title: 'Edited before the create finished' });
+    await flush();
+    expect(api.updateTask).not.toHaveBeenCalled();
+
+    created.resolve(serverTask({ _id: id, version: 0 }));
+    await flush();
+
+    expect(api.updateTask).toHaveBeenCalledWith(id, { title: 'Edited before the create finished' }, 0);
+  });
+
+  it('moves a card between its new neighbors at once and sends the placement', async () => {
     vi.mocked(api.fetchTasks).mockResolvedValue([
       serverTask(),
       serverTask({ _id: 'x', columnId: 'done', orderIndex: 1000 }),
       serverTask({ _id: 'y', columnId: 'done', orderIndex: 2000 }),
     ]);
     await store().loadTasks();
-    const response = deferred<api.MoveResult>();
-    vi.mocked(api.moveTask).mockReturnValue(response.promise);
+    vi.mocked(api.moveTask).mockReturnValue(new Promise(() => {}));
     const placement = { columnId: 'done' as const, beforeId: 'x', afterId: 'y' };
 
-    const done = store().moveTask('a', placement);
+    store().moveTask('a', placement);
+    await flush();
 
     expect(store().view.columns).toMatchObject({ todo: [], done: ['x', 'a', 'y'] });
     expect(store().view.tasksById.a.orderIndex).toBe(1500);
     expect(api.moveTask).toHaveBeenCalledWith('a', placement, 3);
-
-    response.reject(new Error('500'));
-    await expect(done).rejects.toThrow('500');
-    expect(store().view.columns.todo).toEqual(['a']);
   });
 
   it('reports a load failure without throwing', async () => {

@@ -40,8 +40,7 @@ export function MoveButtons({ taskId, title }: MoveButtonsProps) {
     const { view, moveTask } = useBoardStore.getState();
     const placement = stepPlacement(view.columns, taskId, direction);
     if (!placement) return;
-    // On failure the store has already removed the op, so the card is back in place.
-    void moveTask(taskId, placement).catch(() => undefined);
+    moveTask(taskId, placement);
     restoreFocus(taskId, direction);
   }
 

@@ -62,8 +62,7 @@ export function useBoardDrag() {
     const placement = placementOf(finalColumns, id);
     if (!placement || samePlacement(placement, placementOf(view.columns, id))) return;
 
-    // On failure the store has already removed the op, so the card is back in place.
-    void moveTask(id, placement).catch(() => undefined);
+    moveTask(id, placement);
   }
 
   return {

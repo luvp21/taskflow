@@ -1,1 +1,49 @@
 @import 'tailwindcss';
+
+/* Color tokens. Components only use these (bg-card, text-muted, ...), never raw
+   palette colors, so a theme is just a different set of values here. */
+:root {
+  color-scheme: light;
+  --surface: #f4f5f7;
+  --panel: #e8ebf0;
+  --card: #ffffff;
+  --fg: #172033;
+  --muted: #4b5567;
+  --border: #d3d8e0;
+  --accent: #2f5bd3;
+  --accent-fg: #ffffff;
+  --danger: #b42318;
+  --danger-fg: #ffffff;
+  --priority-low-bg: #e3f3e8;
+  --priority-low-fg: #1d6633;
+  --priority-medium-bg: #fff1cc;
+  --priority-medium-fg: #74470a;
+  --priority-high-bg: #fde4e4;
+  --priority-high-fg: #9f1c1c;
+}
+
+/* `inline` makes each utility use the variable itself, so changing a variable
+   (e.g. under .dark later) updates every element that uses it. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-card: var(--card);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-priority-low-bg: var(--priority-low-bg);
+  --color-priority-low-fg: var(--priority-low-fg);
+  --color-priority-medium-bg: var(--priority-medium-bg);
+  --color-priority-medium-fg: var(--priority-medium-fg);
+  --color-priority-high-bg: var(--priority-high-bg);
+  --color-priority-high-fg: var(--priority-high-fg);
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--fg);
+}

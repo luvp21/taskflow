@@ -3,6 +3,12 @@
 export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+};
+
 export const COLUMNS = [
   { id: 'todo', title: 'To Do' },
   { id: 'in_progress', title: 'In Progress' },

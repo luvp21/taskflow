@@ -6,9 +6,11 @@ import { TaskCard } from './TaskCard.tsx';
 interface ColumnProps {
   columnId: ColumnId;
   title: string;
+  onAdd: (columnId: ColumnId) => void;
+  onOpenTask: (taskId: string) => void;
 }
 
-export function Column({ columnId, title }: ColumnProps) {
+export function Column({ columnId, title, onAdd, onOpenTask }: ColumnProps) {
   // applyOps builds new id arrays on every change; useShallow compares the ids
   // inside, so this column re-renders only when ITS list actually changed.
   const taskIds = useBoardStore(useShallow((state) => state.view.columns[columnId]));
@@ -27,6 +29,13 @@ export function Column({ columnId, title }: ColumnProps) {
           {taskIds.length}
           <span className="sr-only"> cards</span>
         </span>
+        <button
+          type="button"
+          onClick={() => onAdd(columnId)}
+          className="ml-auto rounded-md px-2 py-1 text-sm font-medium text-muted hover:bg-card hover:text-fg focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+        >
+          + Add<span className="sr-only"> card to {title}</span>
+        </button>
       </header>
 
       {taskIds.length === 0 ? (
@@ -37,7 +46,7 @@ export function Column({ columnId, title }: ColumnProps) {
         <ul className="flex flex-col gap-2">
           {taskIds.map((id) => (
             <li key={id}>
-              <TaskCard taskId={id} />
+              <TaskCard taskId={id} onOpen={onOpenTask} />
             </li>
           ))}
         </ul>

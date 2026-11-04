@@ -1,0 +1,27 @@
+# Render Blueprint for the API (New > Blueprint > pick this repository).
+# The client is deployed separately on Vercel; the database is MongoDB Atlas.
+services:
+  - type: web
+    name: taskflow-api
+    runtime: node
+    plan: free
+    # Render sets NODE_ENV=production, which makes `npm ci` skip devDependencies;
+    # the TypeScript build needs them, hence --include=dev. The in-memory MongoDB used
+    # by tests must not download its ~180 MB binary on a server.
+    buildCommand: MONGOMS_DISABLE_POSTINSTALL=1 npm ci --include=dev && npm run build -w server
+    startCommand: node server/dist/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      # Lets the Chaos Panel demo rollback in production. It only reacts to requests
+      # that send the x-chaos-* headers.
+      - key: CHAOS_ENABLED
+        value: 'true'
+      # Asked for when the Blueprint is created (never committed):
+      - key: MONGODB_URI # Atlas connection string, including /taskflow
+        sync: false
+      - key: CORS_ORIGIN # the Vercel URL, e.g. https://taskflow-xyz.vercel.app
+        sync: false

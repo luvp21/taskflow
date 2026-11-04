@@ -1,0 +1,20 @@
+# systemd unit for the API on the VM. Installed by deploy/setup.sh.
+[Unit]
+Description=TaskFlow API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/taskflow/server
+# MONGODB_URI, CORS_ORIGIN, PORT, NODE_ENV, CHAOS_ENABLED. Root-owned, mode 600, never in git.
+EnvironmentFile=/etc/taskflow-api.env
+ExecStart=/usr/bin/node dist/index.js
+Restart=on-failure
+RestartSec=3
+# The VM has 1 GB of RAM shared with other services.
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target

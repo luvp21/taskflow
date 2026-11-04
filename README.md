@@ -14,7 +14,7 @@ repeated drags. Built with MongoDB, Express, React and Node, in TypeScript.
 
 Design decisions and trade-offs: [DECISIONS.md](DECISIONS.md).
 
-**Live demo:** _added after deployment_
+**Live demo:** https://taskflow-xi-green.vercel.app (API: https://taskflow-api.140-245-11-73.sslip.io/api/health)
 
 | Light | Dark, filtered (search "set" + High) |
 |---|---|
@@ -151,24 +151,25 @@ docker-compose.yml           local MongoDB replica set
 | Part | Host | Notes |
 |---|---|---|
 | Database | MongoDB Atlas (M0) | Atlas clusters are replica sets, so transactions work. |
-| API | Render (free web service) | Defined in [`render.yaml`](render.yaml). |
+| API | Oracle Cloud VM (Ubuntu, always on) | systemd + nginx + Let's Encrypt; files and steps in [`deploy/`](deploy/README.md). |
 | Client | Vercel | Root directory `client`, framework preset Vite. |
 
-1. **Atlas:** create an M0 cluster, a database user, and allow network access from
-   anywhere (`0.0.0.0/0`), because Render's free instances have no fixed IP. Copy the
-   connection string and add the database name: `mongodb+srv://USER:PASS@HOST/taskflow?retryWrites=true&w=majority`.
+1. **Atlas:** create an M0 cluster and a database user, and allow network access from
+   the VM. Add the database name to the connection string:
+   `mongodb+srv://USER:PASS@HOST/taskflow?retryWrites=true&w=majority`.
 2. **Seed it once from your machine:** `MONGODB_URI="<atlas uri>" npm run seed`.
-3. **Render:** New > Blueprint > this repository. When asked, set `MONGODB_URI` (the
-   Atlas string) and `CORS_ORIGIN` (the Vercel URL from step 4; it can be filled in
-   after the first deploy). The build uses `npm ci --include=dev` because Render sets
-   `NODE_ENV=production`, which would otherwise skip the TypeScript compiler.
+3. **API on the VM:** follow [`deploy/README.md`](deploy/README.md): clone, write
+   `/etc/taskflow-api.env` (`MONGODB_URI`, `CORS_ORIGIN` = the Vercel URL,
+   `NODE_ENV=production`, `CHAOS_ENABLED=true`), run `deploy/setup.sh` once and
+   `deploy/update.sh` for every deploy. The hostname uses [sslip.io](https://sslip.io), so
+   HTTPS works without a DNS record. The browser needs HTTPS here, since the page itself
+   is served over HTTPS.
 4. **Vercel:** import the repository, root directory `client`, and set `VITE_API_URL` to
-   the Render URL (no trailing slash). `VITE_` variables are built into the bundle, so
+   the API URL (no trailing slash). `VITE_` variables are built into the bundle, so
    changing it needs a redeploy.
 
-The free Render instance sleeps after 15 minutes without traffic; the first request
-after that takes about 30 seconds while it starts, and the board shows its loading
-skeleton until the API answers.
+`CHAOS_ENABLED=true` keeps the Chaos Panel working in production. It only affects
+requests that send the `x-chaos-*` headers, which only the panel does.
 
 ## Known limitations
 

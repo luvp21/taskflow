@@ -129,8 +129,10 @@ the client rolls back a change the server kept; a reload shows the truth. Real-t
 
 ## 3. AI debugging retrospective
 
-I used Claude Code to write most of the code, reviewing each change, and I kept a log
-(`AI_NOTES.md`) of every time its code was wrong and had to be fixed. Three real examples:
+Most of the code was written by Claude Code, working phase by phase from my plan, with
+one pull request per phase. Every time its code turned out to be wrong and was fixed, the
+mistake went into a log with the cause, the fix and the commit hash. Three real examples
+(the commit hashes are in this repository's history):
 
 **a) A test setup that only worked on machines that had already run it.**
 The first server test setup started an in-memory MongoDB replica set in Vitest's
@@ -140,8 +142,8 @@ runs test files in parallel, so three workers each started downloading the same 
 binary to the same temp file, and two crashed when the first renamed it. It would have
 passed on any machine with the binary cached, so on a grader's clean machine it would have
 looked like a random failure. The fix was to start **one** replica set in `globalSetup`
-and give each test file its own database name, which keeps the isolation. I confirmed
-it by deleting the binary cache and running from cold.
+and give each test file its own database name, which keeps the isolation. The fix was
+confirmed by deleting the binary cache and running the suite from cold (`a035d22`).
 
 **b) An effect that wasn't safe to run twice (React StrictMode).**
 The task modal's effect saved `document.activeElement` (the button that opened it),
@@ -150,24 +152,24 @@ test showed that after closing the modal, focus was on `<body>`, so a keyboard u
 lost their place. In development, StrictMode runs effects as mount -> cleanup -> mount.
 The cleanup didn't close the dialog, so on the second run the "opener" it saved was the
 dialog's own input. The fix: record the opener only once (`openerRef.current ??= ...`)
-and make the cleanup undo everything (`dialog.close()`, then refocus). The underlying
-bug, an effect that isn't idempotent, would have also caused problems with fast
-remounts in production.
+and make the cleanup undo everything (`dialog.close()`, then refocus) (`bb57123`).
+StrictMode exists to expose exactly this kind of effect: one whose setup can't safely run
+a second time.
 
 **c) A contrast test that read nothing.**
 To enforce WCAG contrast, the AI wrote a test that loaded `index.css` with Vite's
-`?raw` import, to avoid needing Node types in the browser config. I didn't trust a test
-I hadn't seen fail, so I made one dark color deliberately too dark: *every* pair in both
+`?raw` import, to avoid needing Node types in the browser config. Before trusting the
+test, one dark color was made deliberately too dark to see it fail: *every* pair in both
 themes failed, not just the three that use that color. Vitest turns CSS imports
 (including `?raw`) into an empty string, so the test had parsed zero tokens. Written
 slightly differently ("no pair is below 4.5" over an empty list), it would have passed
 forever while checking nothing. The fix: read the file with `node:fs`, type-check that
 test with Node types through its own tsconfig, and throw if a theme block yields no
-tokens. The same mutation then failed exactly the three affected pairs.
+tokens. The same mutation then failed exactly the three affected pairs (`00be6e3`).
 
-Two more are in `AI_NOTES.md`: an optimistic delete that unmounted the modal that should
-show its error, and a test that left a never-resolving request in the sync engine's
-queue and broke the next test.
+Two more from the log: an optimistic delete that unmounted the modal that should have
+shown its error (`bb57123`), and a test that left a never-resolving request in the sync
+engine's queue and broke the next test (`ee2e4f9`).
 
 **What I took from it:** the AI's mistakes were rarely syntax. They were wrong
 assumptions about *runtime environments* (parallel workers, StrictMode, how Vitest
@@ -191,7 +193,8 @@ about 2.5 billion steps at 50k cards, on every change. Close behind it:
   on every change: O(n log n) per change, even when one card moved.
 - **`GET /api/tasks` returns everything**, about 20 MB of JSON at 50k tasks. The sort
   includes `_id` after `columnId, orderIndex`, which the current index
-  `{ columnId: 1, orderIndex: 1 }` can't fully serve, so MongoDB sorts in memory.
+  `{ columnId: 1, orderIndex: 1 }` can't fully serve, so MongoDB sorts in memory
+  (`explain()` shows `SORT` over `COLLSCAN`; without `_id` in the sort it's an `IXSCAN`).
 
 **What breaks next, with 100 editors: stale data.** There's no real-time channel, so
 each person's board is only as fresh as their last load. Edits to cards someone else

@@ -9,5 +9,10 @@ git pull --ff-only
 MONGOMS_DISABLE_POSTINSTALL=1 npm ci -w server --include-workspace-root=false
 npm run build -w server
 sudo systemctl restart taskflow-api
-sleep 2
-curl -fsS http://127.0.0.1:4000/api/health && echo
+# The API listens only after it has connected to MongoDB, which takes a few seconds.
+for _ in $(seq 1 15); do
+  if curl -fsS http://127.0.0.1:4000/api/health; then echo; exit 0; fi
+  sleep 1
+done
+echo 'API did not become healthy; see: journalctl -u taskflow-api -n 50' >&2
+exit 1

@@ -146,6 +146,30 @@ docker-compose.yml           local MongoDB replica set
   refetch), placement and filter logic, form validation, chaos settings, and WCAG
   contrast of every color pair in both themes.
 
+## Deployment
+
+| Part | Host | Notes |
+|---|---|---|
+| Database | MongoDB Atlas (M0) | Atlas clusters are replica sets, so transactions work. |
+| API | Render (free web service) | Defined in [`render.yaml`](render.yaml). |
+| Client | Vercel | Root directory `client`, framework preset Vite. |
+
+1. **Atlas:** create an M0 cluster, a database user, and allow network access from
+   anywhere (`0.0.0.0/0`), because Render's free instances have no fixed IP. Copy the
+   connection string and add the database name: `mongodb+srv://USER:PASS@HOST/taskflow?retryWrites=true&w=majority`.
+2. **Seed it once from your machine:** `MONGODB_URI="<atlas uri>" npm run seed`.
+3. **Render:** New > Blueprint > this repository. When asked, set `MONGODB_URI` (the
+   Atlas string) and `CORS_ORIGIN` (the Vercel URL from step 4; it can be filled in
+   after the first deploy). The build uses `npm ci --include=dev` because Render sets
+   `NODE_ENV=production`, which would otherwise skip the TypeScript compiler.
+4. **Vercel:** import the repository, root directory `client`, and set `VITE_API_URL` to
+   the Render URL (no trailing slash). `VITE_` variables are built into the bundle, so
+   changing it needs a redeploy.
+
+The free Render instance sleeps after 15 minutes without traffic; the first request
+after that takes about 30 seconds while it starts, and the board shows its loading
+skeleton until the API answers.
+
 ## Known limitations
 
 - No authentication or rate limiting.

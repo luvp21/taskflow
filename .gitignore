@@ -24,3 +24,5 @@ START_HERE.md
 .DS_Store
 .vscode/
 .idea/
+.vercel
+.env.local
